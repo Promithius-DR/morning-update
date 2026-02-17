@@ -30,9 +30,8 @@ def get_weather():
         low_f = today["mintempF"]
 
         return (
-            f"🌤 Weather in {CITY}\n"
-            f"  {desc}, {temp_f}°F (feels {feels_f}°F)\n"
-            f"  High {high_f}°F · Low {low_f}°F · Humidity {humidity}%"
+            f"🌤 <b>{CITY}</b> — {desc}, {temp_f}°F (feels {feels_f}°F)\n"
+            f"High {high_f}° · Low {low_f}° · Humidity {humidity}%"
         )
     except Exception as e:
         return f"⚠️ Weather unavailable ({e})"
@@ -71,21 +70,25 @@ def get_assignments():
         title = item.get("plannable", {}).get("title", "Untitled")
         course = item.get("context_name", "")
 
+        # Strip instructor surname from course name (e.g. "Adult Health II-Mondragon")
+        parts = course.rsplit("-", 1)
+        short_course = parts[0].strip() if len(parts) == 2 and " " not in parts[1].strip() else course
+
         if days_left == 0:
-            label = "TODAY"
+            label = "<b>TODAY</b>"
         elif days_left == 1:
-            label = "tomorrow"
+            label = "<b>tomorrow</b>"
         else:
             label = f"in {days_left}d"
 
-        assignments.append((days_left, f"  • {title} [{course}] — due {label}"))
+        assignments.append((days_left, f"• {label} — {title}\n  <i>{short_course}</i>"))
 
     if not assignments:
         return f"📚 No assignments due in the next {DAYS_AHEAD} days."
 
     assignments.sort(key=lambda x: x[0])
     lines = "\n".join(a[1] for a in assignments)
-    return f"📚 Upcoming assignments\n{lines}"
+    return f"📚 <b>Upcoming assignments</b>\n{lines}"
 
 
 # ── Send via Pushover ─────────────────────────────────────────────────────────
@@ -99,6 +102,7 @@ def send_pushover(title, message):
             "title": title,
             "message": message,
             "priority": 0,
+            "html": 1,
         },
         timeout=10,
     )
