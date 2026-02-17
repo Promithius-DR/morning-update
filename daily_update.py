@@ -1,6 +1,7 @@
 import os
 import requests
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 PUSHOVER_TOKEN = os.environ["PUSHOVER_TOKEN"]
 PUSHOVER_USER = os.environ["PUSHOVER_USER"]
@@ -48,7 +49,8 @@ def get_weather():
 
 def get_assignments():
     headers = {"Authorization": f"Bearer {CANVAS_TOKEN}"}
-    now = datetime.now(timezone.utc)
+    central = ZoneInfo("America/Chicago")
+    now = datetime.now(central)
     cutoff = now + timedelta(days=DAYS_AHEAD)
 
     # Pull upcoming assignments from the planner
@@ -72,7 +74,7 @@ def get_assignments():
         if not due_raw:
             continue
 
-        due_dt = datetime.fromisoformat(due_raw.replace("Z", "+00:00"))
+        due_dt = datetime.fromisoformat(due_raw.replace("Z", "+00:00")).astimezone(central)
         days_left = (due_dt.date() - now.date()).days
         title = item.get("plannable", {}).get("title", "Untitled")
         course = item.get("context_name", "")
