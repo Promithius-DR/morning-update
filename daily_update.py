@@ -15,8 +15,15 @@ DAYS_AHEAD = int(os.environ.get("DAYS_AHEAD", "7"))
 def get_weather():
     try:
         url = f"https://wttr.in/{requests.utils.quote(CITY)}?format=j1"
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
+        for attempt in range(3):
+            try:
+                r = requests.get(url, timeout=20)
+                r.raise_for_status()
+                break
+            except requests.exceptions.Timeout:
+                if attempt == 2:
+                    raise
+                continue
         data = r.json()
 
         current = data["current_condition"][0]
