@@ -1,0 +1,32 @@
+name: Morning Update
+
+on:
+  schedule:
+    # 7:00 AM Eastern = 12:00 UTC (adjust for your timezone)
+    - cron: "0 12 * * *"
+  workflow_dispatch: # allows manual trigger from GitHub UI
+
+jobs:
+  send-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send morning update
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+          CANVAS_TOKEN: ${{ secrets.CANVAS_TOKEN }}
+          CANVAS_URL: ${{ secrets.CANVAS_URL }}
+          CITY: ${{ secrets.CITY }}
+          DAYS_AHEAD: "7"
+        run: python daily_update.py
