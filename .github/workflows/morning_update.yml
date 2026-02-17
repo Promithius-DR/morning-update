@@ -2,8 +2,8 @@ name: Morning Update
 
 on:
   schedule:
-    # 7:00 AM Eastern = 12:00 UTC (adjust for your timezone)
-    - cron: "0 12 * * *"
+    # 7:00 AM Central = 13:00 UTC (CST); shifts to 8 AM in CDT summer
+    - cron: "0 13 * * *"
   workflow_dispatch: # allows manual trigger from GitHub UI
 
 jobs:
