@@ -90,6 +90,7 @@ def get_assignments():
         else:
             label = f"in {days_left}d"
 
+        print(f"DEBUG: {title} | due_raw={due_raw} | due_central={due_dt} | days_left={days_left}")
         assignments.append((days_left, f"• {label} — {title}\n  <i>{short_course}</i>"))
 
     if not assignments:
