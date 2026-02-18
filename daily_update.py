@@ -13,29 +13,66 @@ DAYS_AHEAD = int(os.environ.get("DAYS_AHEAD", "7"))
 
 # ── Weather ───────────────────────────────────────────────────────────────────
 
+# WMO Weather interpretation codes → human-readable description
+_WMO_CODES = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Foggy", 48: "Icy fog",
+    51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+    61: "Light rain", 63: "Rain", 65: "Heavy rain",
+    71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+    80: "Light showers", 81: "Showers", 82: "Heavy showers",
+    85: "Snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm w/ hail", 99: "Thunderstorm w/ heavy hail",
+}
+
+
+def _fetch(url, **kwargs):
+    """GET with 3 attempts and a 10-second timeout."""
+    for attempt in range(3):
+        try:
+            r = requests.get(url, timeout=10, **kwargs)
+            r.raise_for_status()
+            return r
+        except requests.exceptions.Timeout:
+            if attempt == 2:
+                raise
+    return r  # unreachable, but satisfies linters
+
+
 def get_weather():
     try:
-        url = f"https://wttr.in/{requests.utils.quote(CITY)}?format=j1"
-        for attempt in range(3):
-            try:
-                r = requests.get(url, timeout=20)
-                r.raise_for_status()
-                break
-            except requests.exceptions.Timeout:
-                if attempt == 2:
-                    raise
-                continue
-        data = r.json()
+        # Step 1: geocode city name → lat/lon
+        geo = _fetch(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": CITY, "count": 1, "language": "en", "format": "json"},
+        ).json()
+        if not geo.get("results"):
+            return f"⚠️ Weather unavailable (city not found: {CITY})"
+        result = geo["results"][0]
+        lat, lon = result["latitude"], result["longitude"]
 
-        current = data["current_condition"][0]
-        today = data["weather"][0]
+        # Step 2: fetch current conditions + today's high/low
+        wx = _fetch(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "current": "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code",
+                "daily": "temperature_2m_max,temperature_2m_min",
+                "temperature_unit": "fahrenheit",
+                "timezone": "auto",
+                "forecast_days": 1,
+            },
+        ).json()
 
-        desc = current["weatherDesc"][0]["value"]
-        temp_f = current["temp_F"]
-        feels_f = current["FeelsLikeF"]
-        humidity = current["humidity"]
-        high_f = today["maxtempF"]
-        low_f = today["mintempF"]
+        cur = wx["current"]
+        daily = wx["daily"]
+        desc = _WMO_CODES.get(cur["weather_code"], f"Code {cur['weather_code']}")
+        temp_f = round(cur["temperature_2m"])
+        feels_f = round(cur["apparent_temperature"])
+        humidity = cur["relative_humidity_2m"]
+        high_f = round(daily["temperature_2m_max"][0])
+        low_f = round(daily["temperature_2m_min"][0])
 
         return (
             f"🌤 <b>{CITY}</b> — {desc}, {temp_f}°F (feels {feels_f}°F)\n"
